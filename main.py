@@ -10,9 +10,9 @@ if __name__ == "__main__":
     loans_defaulters_df = datareader.read_loans_defaulters_data(spark,env)
     loans_repayment_df = datareader.read_loans_repayment_data(spark,env)
 
-    datamanipulation.write_cleaned_customers_data(customers_df)
-
-
+    # datamanipulation.write_cleaned_customers_data(customers_df)
+    # datamanipulation.write_cleaned_loans_data(loans_df)
+    loans_defaulters_df.show(5)
 
 
 

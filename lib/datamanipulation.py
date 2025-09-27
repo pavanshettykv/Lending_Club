@@ -25,5 +25,34 @@ def write_cleaned_customers_data(customers_df):
         .write\
         .format("parquet")\
         .mode("overwrite")\
-        .save(f"{cleaned_file_path}/customers_parquet1")
+        .save(f"{cleaned_file_path}/customers_parquet")
 
+def write_cleaned_loans_data(loans_df):
+    loans_df = loans_df.withColumnRenamed("loan_amnt","loan_amount")\
+        .withColumnRenamed("funded_amnt","funded_amount")\
+        .withColumnRenamed("term","loan_term_months")\
+        .withColumnRenamed("int_rate","interest_rate")\
+        .withColumnRenamed("installment","monthly_installment")\
+        .withColumnRenamed("issue_d","issue_date")\
+        .withColumnRenamed("purpose","loan_purpose")\
+        .withColumnRenamed("title","loan_title")\
+        .withColumn("ingestion_date",current_timestamp()) 
+    
+    columns_to_check = ["loan_amount", "funded_amount", "loan_term_months","interest_rate","monthly_installment","issue_date","loan_status","loan_purpose"]
+    loan_purpose_lookup = ["debt_consolidation", "credit_card","home_improvement", "other", "major_purchase", "medical", "small_business","car", "vacation", "moving", "house", "wedding", "renewable_energy","educational"]
+    
+    loans_df = loans_df.dropna(subset = columns_to_check)\
+                    .withColumn("loan_purpose",when(col("loan_purpose").isin(loan_purpose_lookup),col("loan_purpose")).otherwise("other"))\
+                    .withColumn("loan_term_year",regexp_replace(col("loan_term_months"),"\D","").cast("int")/12)\
+                    
+    loans_df.repartition(8)\
+        .write\
+        .format("parquet")\
+        .mode("overwrite")\
+        .save(f"{cleaned_file_path}/loans_parquet")
+    
+
+    def write_cleaned_loans_defaulters_data(loans_defaulters_df):
+        loans_defaulters_df = loans_defaulters_df.withColumn("ingestion_date",current_timestamp())
+
+    
