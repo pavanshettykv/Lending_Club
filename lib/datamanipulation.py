@@ -11,8 +11,10 @@ def get_cleaned_customers_data(customers_df):
                             .distinct()\
                             .filter(col("annual_income").isNotNull())\
                             .withColumn("emp_length",regexp_replace(col("emp_length"),"\D","").cast("int"))
+    # filled missing emp_length with average emp_length
     emp_len_avg = cleaned_customers_df.agg(floor(avg(col("emp_length")))).collect()[0][0] 
     cust_df = cleaned_customers_df.na.fill(emp_len_avg,["emp_length"])
+    # address_state should be of length 2 else 'NA'
     cleaned_cust_df = cust_df.withColumn("address_state",when(length(col("address_state"))>2,'NA').otherwise(col("address_state")))
     # cleaned_cust_df.show(5)
     return cleaned_cust_df
