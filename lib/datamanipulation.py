@@ -1,6 +1,10 @@
 from pyspark.sql.functions import *
+from lib import configreader
 
-def get_cleaned_customers_data(customers_df):
+conf = configreader.get_app_config("LOCAL")
+cleaned_file_path = conf["cleaned.file.path"]
+
+def write_cleaned_customers_data(customers_df):
     cleaned_customers_df = customers_df.withColumnRenamed("annual_inc","annual_income")\
                             .withColumnRenamed("addr_state","address_state")\
                             .withColumnRenamed("zip_code","address_zipcode")\
@@ -17,4 +21,9 @@ def get_cleaned_customers_data(customers_df):
     # address_state should be of length 2 else 'NA'
     cleaned_cust_df = cust_df.withColumn("address_state",when(length(col("address_state"))>2,'NA').otherwise(col("address_state")))
     # cleaned_cust_df.show(5)
-    return cleaned_cust_df
+    cleaned_cust_df\
+        .write\
+        .format("parquet")\
+        .mode("overwrite")\
+        .save(f"{cleaned_file_path}/customers_parquet1")
+
