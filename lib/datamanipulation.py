@@ -51,8 +51,76 @@ def write_cleaned_loans_data(loans_df):
         .mode("overwrite")\
         .save(f"{cleaned_file_path}/loans_parquet")
     
+def write_cleaned_loans_repayment_data(loans_repayment_df):
+    loans_repayment_df = loans_repayment_df.withColumn("ingestion_date",current_timestamp())\
+                            .withColumnRenamed("total_rec_prncp","total_principal_received")\
+                            .withColumnRenamed("total_rec_int","total_interest_received")\
+                            .withColumnRenamed("total_rec_late_fee","total_late_fee_received")\
+                            .withColumnRenamed("total_pymnt","total_payment_received")\
+                            .withColumnRenamed("last_pymnt_amnt","last_payment_amount")\
+                            .withColumnRenamed("last_pymnt_d","last_payment_date")\
+                            .withColumnRenamed("next_pymnt_d","next_payment_date")\
+                            .dropna(subset=["total_principal_received","total_interest_received","total_payment_received","last_payment_amount","total_late_fee_received"])
+    
+    # if total_payment_received is 0 then calculate it from principal, interest and late fee
+    loans_repayment_df = loans_repayment_df\
+                            .withColumn("total_payment_received",\
+                                        when(((col("total_principal_received") != 0.0) & (col("total_payment_received")==0.0)),col("total_principal_received") + col("total_interest_received") + col("total_late_fee_received"))\
+                                        .otherwise(col("total_payment_received"))
+                                        )\
+                            .withColumn("last_payment_date",when(col("last_payment_date") == 0.0,None).otherwise(col("last_payment_date")))\
+                            .withColumn("next_payment_date",when(col("next_payment_date") == 0.0,None).otherwise(col("next_payment_date")))
 
-    def write_cleaned_loans_defaulters_data(loans_defaulters_df):
-        loans_defaulters_df = loans_defaulters_df.withColumn("ingestion_date",current_timestamp())
+    loans_repayment_df.repartition(8)\
+        .write\
+        .format("parquet")\
+        .mode("overwrite")\
+        .save(f"{cleaned_file_path}/loans_repayment_parquet")
+    
 
     
+def write_cleaned_loans_defaulters_data(loans_defaulters_df):
+    loans_defaulters_df = loans_defaulters_df.withColumn("ingestion_date",current_timestamp())
+   
+    # Delinquency related defaults
+    loans_defaulters_delinq = loans_defaulters_df.withColumn("delinq_2yrs",col("delinq_2yrs").cast("int")).fillna(0,subset=["delinq_2yrs"])\
+                        .withColumn("mnths_since_last_delinq",col("mths_since_last_delinq").cast("int"))\
+                        .filter("mnths_since_last_delinq >0 and delinq_2yrs >0")\
+                        .select("member_id","delinq_2yrs","delinq_amnt","mnths_since_last_delinq","ingestion_date")
+    
+    # Public record related defaults
+    loans_defaulters_pub_rec = loans_defaulters_df\
+                        .withColumn("pub_rec",col("pub_rec").cast("int")).fillna(0,subset=["pub_rec"])\
+                        .withColumn("pub_rec_bankruptcies",col("pub_rec_bankruptcies").cast("int")).fillna(0,subset=["pub_rec_bankruptcies"])\
+                        .withColumn("mnths_since_last_record",col("mths_since_last_record").cast("int")).fillna(0,subset=["mnths_since_last_record"])\
+                        .filter("pub_rec > 0 or pub_rec_bankruptcies >0").select("member_id")
+
+    loans_defaulters_delinq.repartition(8)\
+        .write\
+        .format("parquet")\
+        .mode("overwrite")\
+        .save(f"{cleaned_file_path}/loans_defaulters_delinq_parquet")
+    
+    loans_defaulters_pub_rec.repartition(8)\
+        .write\
+        .format("parquet")\
+        .mode("overwrite")\
+        .save(f"{cleaned_file_path}/loans_defaulters_pubrec_parquet")
+
+
+    # loans_defaulters_df.createOrReplaceTempView("loans_defaulters_df")
+    # spark.sql("select delinq_2yrs,count(*) from loans_defaulters_df group by delinq_2yrs order by delinq_2yrs").show()
+
+    # loans_defaulters_df.filter()
+
+
+
+
+
+
+
+
+
+
+
+
