@@ -1,4 +1,4 @@
-from lib import Utils,datareader,datamanipulation,create_tables,bad_data
+from lib import Utils,datareader,datamanipulation,bad_data,loan_score
 from pyspark.sql import SparkSession
 
 if __name__ == "__main__":
@@ -17,14 +17,15 @@ if __name__ == "__main__":
     loans_defaulters_df = datareader.read_loans_defaulters_data(spark,env)
     loans_repayment_df = datareader.read_loans_repayment_data(spark,env)
 
-    # datamanipulation.write_cleaned_customers_data(customers_df)
-    # datamanipulation.write_cleaned_loans_data(loans_df)
-    # datamanipulation.write_cleaned_loans_repayment_data(loans_repayment_df)
-    # datamanipulation.write_cleaned_loans_defaulters_data(loans_defaulters_df)
-    # create_tables.get_cleaned_customers_data(spark)
-    # create_tables.get_cleaned_loans_data(spark)
-    
-    # bad_data.write_bad_customers_data(spark)
+    datamanipulation.write_cleaned_customers_data(customers_df)
+    datamanipulation.write_cleaned_loans_data(loans_df)
+    datamanipulation.write_cleaned_loans_repayment_data(loans_repayment_df)
+    datamanipulation.write_cleaned_loans_defaulters_data(loans_defaulters_df)
+    print("Data Cleaning Completed")
+    bad_data.write_bad_customers_data(spark)
     bad_data.remove_bad_data(spark)
+    print("Bad Data Handled")
+    credit_score = loan_score.calculate_load_score(spark)
+    credit_score.show(5)
 
 
