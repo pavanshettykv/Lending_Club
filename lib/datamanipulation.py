@@ -93,7 +93,8 @@ def write_cleaned_loans_defaulters_data(loans_defaulters_df):
                         .withColumn("pub_rec",col("pub_rec").cast("int")).fillna(0,subset=["pub_rec"])\
                         .withColumn("pub_rec_bankruptcies",col("pub_rec_bankruptcies").cast("int")).fillna(0,subset=["pub_rec_bankruptcies"])\
                         .withColumn("mnths_since_last_record",col("mths_since_last_record").cast("int")).fillna(0,subset=["mnths_since_last_record"])\
-                        .filter("pub_rec > 0 or pub_rec_bankruptcies >0").select("member_id")
+                        .withColumn("inq_last_6mths",col("inq_last_6mths").cast("int")).fillna(0,subset=["inq_last_6mths"])\
+                        .filter("pub_rec > 0 or pub_rec_bankruptcies >0")
 
     loans_defaulters_delinq.repartition(8)\
         .write\
@@ -101,20 +102,19 @@ def write_cleaned_loans_defaulters_data(loans_defaulters_df):
         .mode("overwrite")\
         .save(f"{cleaned_file_path}/loans_defaulters_delinq_parquet")
     
-    loans_defaulters_pub_rec.repartition(8)\
+    loans_defaulters_pub_rec.select("member_id").repartition(8)\
         .write\
         .format("parquet")\
         .mode("overwrite")\
         .save(f"{cleaned_file_path}/loans_defaulters_pubrec_parquet")
 
+    loans_defaulters_pub_rec_detail = loans_defaulters_pub_rec.select("member_id","pub_rec","pub_rec_bankruptcies","inq_last_6mths")
 
-    # loans_defaulters_df.createOrReplaceTempView("loans_defaulters_df")
-    # spark.sql("select delinq_2yrs,count(*) from loans_defaulters_df group by delinq_2yrs order by delinq_2yrs").show()
-
-    # loans_defaulters_df.filter()
-
-
-
+    loans_defaulters_pub_rec_detail.repartition(8)\
+        .write\
+        .format("parquet")\
+        .mode("overwrite")\
+        .save(f"{cleaned_file_path}/loans_defaulters_pubrec_detail_parquet")
 
 
 
