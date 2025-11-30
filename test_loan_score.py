@@ -9,21 +9,15 @@ def spark():
 
 @pytest.mark.latest()
 def test_no_of_bad_customers_data(spark):
-    # env = "LOCAL"
-    # spark = Utils.get_spark_session(env)
-    # bad_data.write_bad_customers_data(spark)
-
     bad_customers_df = spark.read.parquet(f"{bad_data.bad_file_path}/bad_customers_data")
     bad_count = bad_customers_df.count()
-    assert bad_count >0, "No bad customers data found"
     print(f"Bad customers data count: {bad_count}")
+    assert bad_count >0, "No bad customers data found"
 
-@pytest.mark.skip
-def test_calculate_loan_score():
+
+@pytest.mark.latest()
+def test_check_empty_dataframe(spark):
     env = "LOCAL"
-    spark = Utils.get_spark_session(env)
-
-    # Read cleaned data
     customers_df = datareader.read_customers_data(spark,env)
     loans_df = datareader.read_loans_data(spark,env)
     loans_defaulters_df = datareader.read_loans_defaulters_data(spark,env)
@@ -35,14 +29,19 @@ def test_calculate_loan_score():
     assert loans_defaulters_df.count() > 0, "Loans Defaulters DataFrame is empty"
     assert loans_repayment_df.count() > 0, "Loans Repayment DataFrame is empty"
 
+
+@pytest.mark.latest()
+def test_check_output_cols(spark):
+    final_df = loan_score.calculate_loan_score(spark)
+    final_columns = set(final_df.columns)
+    expected_columns = {"member_id", "credit_score"}
+    assert final_columns.issubset(expected_columns), "Output columns do not match expected columns"
+
+@pytest.mark.skip
+def test_calculate_loan_score(spark):
     # Calculate loan score
     credit_score_df = loan_score.calculate_loan_score(spark)
 
     # Validate the result
     assert credit_score_df is not None, "Credit Score DataFrame is None"
     assert credit_score_df.count() > 0, "Credit Score DataFrame is empty"
-
-#     # Check for expected columns in the result
-#     expected_columns = {"member_id", "credit_score"}
-#     actual_columns = set(credit_score_df.columns)
-#     assert expected_columns.issubset(actual_columns), f"Missing expected columns: {expected_columns - actual_columns}"
