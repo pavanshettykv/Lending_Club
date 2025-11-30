@@ -15,8 +15,9 @@ def get_pyspark_config(env):
     config.read("conf/spark.conf")
     pyspark_conf = SparkConf()
     for (key, val) in config.items(env):
+        print(config.items(env))
         pyspark_conf.set(key, val)
     return pyspark_conf
 
 
-
+print(get_pyspark_config('LOCAL'))

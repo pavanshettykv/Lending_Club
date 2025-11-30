@@ -7,7 +7,7 @@ cleaned_file_path = conf["cleaned.file.path"]
 cleanednew_file_path = conf["cleanednew.file.path"]
 processed_file_path = conf["processed.file.path"]
 
-def calculate_load_score(spark):
+def calculate_loan_score(spark):
     bad_data_df = spark.read.parquet(f"{bad_file_path}/bad_customers_data")
     customers_df = spark.read.parquet(f"{cleanednew_file_path}/customers_parquet")
     loan_df = spark.read.parquet(f"{cleaned_file_path}/loans_parquet")
